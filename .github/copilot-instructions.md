@@ -1,0 +1,1 @@
+- Subagents MUST ALWAYS USE multi_replace_string_in_file tool for edits (otherwise file edits are slow, this is better for speed performance).

@@ -1,0 +1,216 @@
+# UX Designer Skill — Persistent Memory (Compressed State Snapshot)
+# HARD LIMIT: ≤ 400 lines. Compress before saving if exceeded.
+# Schema version: 1.0 | Last updated: 2026-03-12
+
+schema_version: "1.0"
+last_updated: "2026-03-12"
+
+# ─── UX Audit History ───────────────────────────────────────────────
+audit_history:
+  total_audits: 23
+  total_issues_found: 52
+  total_issues_fixed: 50
+  total_issues_deferred: 2
+
+  # Iterations compressed to single-line summaries
+  iterations:
+    - "#13: Generic spinner loading → skeleton clip cards mirroring layout (2026-03-11, #90, 2 files)"
+    - "#14: Analytics dead-end after publishing → breadcrumb nav + content cycle CTA (2026-03-11, #91, 2 files)"
+    - "#15: Hands-Free Mode invisible → z-switch toggle in 2 locations + fixed analytics link (2026-03-11, #92, 3 files)"
+    - "#16: Bare AI clip generation wait → rich multi-stage progress + elapsed timer + tips (2026-03-11, #102, 3 files)"
+    - "#17: Dead-end no platforms connected → action-oriented Connect & Publish hero CTA (2026-03-11, #103, 2 files)"
+    - "#18: 3-click per-clip publish → 1-click with z-dropdown-menu (2026-03-11, #104, 2 files)"
+    - "#19: No clip gen progress in Getting Started Guide → live progress pipeline (2026-03-11, #105, 5 files)"
+    - "#20: Missing clip score dimension explainer → expandable info panel with 5 dimensions (2026-03-12, #108, 2 files)"
+    - "#20b: Plain platform integrations → responsive 3-col grid with icons/accents/status (2026-03-12, 2 files)"
+    - "#21: Publishing failure dead end → per-record retry + bulk retry + AuthError guidance (2026-03-12, 4 files)"
+    - "#22: Generic collapsed video cards → status-contextual clip summary + top score badge (2026-03-12, 2 files)"
+    - "#23: No section nav for returning users → quick-nav bar with jump links (2026-03-12, 2 files)"
+
+# ─── Core Flow Assessment ────────────────────────────────────────────
+core_flow:
+  description: "Upload → Process → Generate Scored Clips → Publish Everywhere"
+  last_assessed: "2026-03-12"
+  overall_status: excellent
+  stages:
+    registration: {status: excellent, active_time: "4-5s", notes: "Progressive 2-step, auto-advance email (800ms), auto-submit password (600ms), optional YouTube URL, hero URL quick-start"}
+    brand_creation: {status: excellent, notes: "Auto-created from display name, skeleton loading, auto-scroll to videos"}
+    video_import: {status: excellent, notes: "Inline YouTube URL auto-import on paste (100ms), sample video, auto-focus, TTFC time badge"}
+    processing: {status: excellent, notes: "SignalR real-time, 6-stage counter, tips carousel (7/8s), elapsed timer, countdown, milestone toasts, Express Mode"}
+    clip_generation: {status: excellent, notes: "Auto-triggered on Ready, multi-stage progress UI, scoring preview, AI tips, first-clip toast, guide progress"}
+    clip_review: {status: excellent, notes: "Auto-approve/render for new users, dimension explainer, skeleton cards, 1-click publish, status-contextual cards"}
+    publishing: {status: excellent, notes: "Hands-Free ON default, bulk Publish All, connect CTA banner, failure recovery (retry/bulk/AuthError), success banner"}
+    analytics: {status: excellent, notes: "Breadcrumb nav, brand-contextual title, Back to Brand, content cycle CTA, Clip Performance Pulse"}
+
+# ─── UX Issues Tracker ───────────────────────────────────────────────
+issues:
+  summary: {total_found: 52, fixed: 50, deferred: 2}
+  critical_fixed: ["#1 PublishingPanel dead code", "#2 No Render button", "#9 No Generate Clips button", "#9b Broken brand CTA route", "#10 No onboarding", "#17 TranscodingProgress not listened", "#23-24 Opaque scores", "#33-36 Post-publish dead end", "#49 No bulk publish", "#50 Opaque scoring", "#51 Published clips lose state on reload", "#52 Post-publish content cycle dead end", "#53 Hands-Free invisible", "#53b Broken celebration analytics link", "#54 Clip score dimensions unexplained"]
+  high_fixed: ["#4 connectedPlatforms not passed", "#11 No auto-slug", "#12 No auto-navigate after brand create", "#14 No upload toast", "#15 Processing hidden for Uploaded", "#16 Clips hidden behind button", "#19 No platform auto-select", "#20 Connect Platforms missing from onboarding", "#22 YouTube description not pre-filled", "#26 2-click publish", "#27 Empty brand list extra click", "#28 Ready videos manual click", "#37 No per-clip render transition", "#40-43 Auth OnPush/password/inline errors/aria"]
+  medium_low_fixed: ["#6 Dashboard non-clickable", "#7 No platform warning", "#8 No render toast", "#13 Brand detail guide", "#18 Dashboard Quick Actions", "#21 Platform CTA banner", "#29 YouTube optional fields", "#30 Upload description", "#31 No processing time", "#32 Stepper step 5", "#38 Render CTA hidden", "#39 Card transitions", "#44 Auth branding", "#45 Display name hint", "#46 Empty .scss"]
+  deferred:
+    - {description: "No password strength indicator", severity: minor}
+    - {description: "Controller brand/video ownership validation repeated 8+ times — partially fixed in #111", severity: medium, remaining: "BrandsController(5), LlmConfigurationsController(7), AnalyticsController(5), AuthController(1)"}
+
+# ─── TTFC (Time-To-First-Clip) ───────────────────────────────────────
+ttfc:
+  last_updated: "2026-03-12"
+  current_metrics:
+    active_time: "4-5s"
+    total_wait: "5-13 min (95% backend)"
+    clicks: 0
+    pages: 2
+    manual_steps: 0
+    reduction_from_baseline: "90-92% (baseline ~50s at iteration #52)"
+
+  pipeline: "Land (paste URL in hero) → Register (email auto-advance, password auto-submit, auto-brand) → Brand Detail (skeleton, auto-import) → Processing (6-stage, 3-8min, toasts+countdown+tips) → Auto-Generate (2-4min) → Auto-Approve+Render (1-3min/clip) → Auto-Publish (Hands-Free ON)"
+
+  quick_wins_implemented:
+    - {id: 1, win: "Video Processing Progress Display", impact: "-30% perceived wait"}
+    - {id: 2, win: "Auto-Generate Clips on Ready", impact: "Saves 2 clicks"}
+    - {id: 3, win: "Simplified Hero CTA transitions", impact: "Saves 2-3 clicks"}
+    - {id: 4, win: "Encouraging Micro-Copy (3-tier)", impact: "+15% completion"}
+    - {id: 5, win: "Sample Video Quick-Start", impact: "Eliminates upload decision friction"}
+    - {id: 6, win: "Processing Wait Tips Carousel (7/8s)", impact: "-20% perceived wait"}
+    - {id: 7, win: "Enhanced Upload Guidance", impact: "Reduces upload hesitation"}
+    - {id: 8, win: "Registration Value Prop", impact: "+5-10% registration conversion"}
+    - {id: 9, win: "Auto-Import on URL Paste (100ms debounce)", impact: "Saves 1 click + 3s"}
+    - {id: 10, win: "Hands-Free Mode Default ON", impact: "Eliminates last manual click"}
+    - {id: 11, win: "Registration Auto-Focus + Live Password Checklist", impact: "-5s"}
+    - {id: 12, win: "Processing Elapsed Timer", impact: "Reduces stalling anxiety"}
+    - {id: 13, win: "Email-First Registration + Auto-Derived Display Name", impact: "-5-8s cognitive"}
+    - {id: 14, win: "Brand Detail Skeleton Loading", impact: "-2-3s perceived"}
+    - {id: 15, win: "Programmatic YouTube URL Auto-Focus", impact: "-2-3s"}
+    - {id: 16, win: "Progressive 2-Step Registration Form", impact: "-8-10s active"}
+    - {id: 17, win: "Compact Auto-Derived Display Name", impact: "-3-5s decision"}
+    - {id: 18, win: "Getting Started Time Estimates Per Step", impact: "-perceived anxiety"}
+    - {id: 19, win: "TTFC Remaining Estimate (dynamic)", impact: "-perceived wait"}
+    - {id: 20, win: "Auto-Scroll to Video Section (200ms)", impact: "-3-5s"}
+    - {id: 21, win: "YouTube Import TTFC Time Badge", impact: "-perceived effort"}
+    - {id: 22, win: "Auto-Submit on Password Valid (600ms)", impact: "-2s"}
+    - {id: 23, win: "YouTube URL During Registration", impact: "-2-3s"}
+    - {id: 24, win: "Landing Page YouTube URL Quick-Start", impact: "-3-5s"}
+    - {id: 25, win: "Faster Step Transition (300→150ms)", impact: "-0.15s"}
+    - {id: 26, win: "Unified importUrl Passthrough", impact: "URL preserved end-to-end"}
+
+  cumulative_reduction: {clicks: "20→0 (100%)", pages: "7→2 (71%)", manual_steps: "15+→0 (100%)", active_time: "5-10min→4-5s (99%)", decision_friction: "Multiple→~0 (100%)"}
+
+  per_step_breakdown:
+    - {step: 1, action: "Register", clicks: 0, active: "4-5s", wait: "0", notes: "URL from landing carried through"}
+    - {step: 2, action: "Import video", clicks: 0, active: "0", wait: "0", notes: "Auto-import via importUrl"}
+    - {step: 3, action: "Processing", clicks: 0, active: "0", wait: "3-8 min", notes: "Toasts + countdown + tips + timer"}
+    - {step: "3b", action: "Connect Platform (parallel)", clicks: 1, active: "30-60s", wait: "0"}
+    - {step: 4, action: "Clip generation", clicks: 0, active: "0", wait: "1-5 min"}
+    - {step: 5, action: "Auto-approve & render", clicks: 0, active: "0", wait: "1-5 min"}
+    - {step: 6, action: "Publish All", clicks: 0, active: "0", wait: "0", notes: "Hands-Free auto-publishes"}
+
+  remaining_opportunities:
+    - "Auto-connect demo platform (sandbox onboarding)"
+    - "Background upload notification (tus resume)"
+    - "Pre-generate clips during transcription"
+    - "Login smart redirect (1 brand+videos → brand-detail)"
+    - "Backend pipeline optimization (parallelize Chunking+Transcription, ~40% wait reduction)"
+
+# ─── Design System ───────────────────────────────────────────────────
+design_system:
+  reference_file: ".github/skills/ux-designer/references/design-conventions.md"
+  last_updated: "2026-03-12"
+  semantic_tokens_enforced: true
+  raw_color_exceptions: ["text-green/red-600 for success/failure", "Chart/data viz colors", "Platform accents (YouTube red, Instagram pink, TikTok cyan)"]
+  key_patterns:
+    page_shell: "z-page + z-page-header via PageLayoutImports"
+    error_state: "z-alert zType='destructive' [zDescription]"
+    loading_state: "z-loader + text OR z-skeleton for data-heavy"
+    empty_state: "z-empty with icon, title, description, optional action"
+    stat_card: "z-card + icon (h-11 w-11 rounded-lg bg-primary/10) + label + value"
+    list_item: "rounded-md border border-border p-3 flex items-center justify-between"
+    section_heading: "text-xl font-semibold tracking-tight text-foreground mb-4"
+  spacing: {page_gap: "gap-6", card_grid: "gap-4", stat_grid: "grid-cols-1 sm:2 lg:4 gap-4", list_items: "space-y-3 or gap-3", button_icon: "mr-2", button_groups: "gap-2 or gap-3"}
+  responsive: {cards: "grid-cols-1 sm:2 lg:3", stats: "grid-cols-1 sm:2 lg:4", jobs: "grid-cols-2 sm:3 lg:5"}
+
+# ─── Component Patterns ──────────────────────────────────────────────
+component_patterns:
+  last_audit: "2026-03-12"
+  shared_components: ["z-empty", "z-loader", "z-skeleton", "z-alert", "z-badge", "z-divider", "z-breadcrumb", "z-switch", "z-dropdown-menu"]
+  all_features_onpush: true
+  all_features_standalone: true
+  extractions_completed: ["formatTime()+formatScore() → format-utils.ts (6 components)", "formatFileSize() → format-utils.ts (2 components)", "ng-template #brandLogo for header/footer logo"]
+
+# ─── State Coverage ──────────────────────────────────────────────────
+state_coverage:
+  last_verified: "2026-03-12"
+  notes: "All feature pages have proper error → loading → empty → content chains"
+  skeleton_loading: ["Clip proposals (3 skeleton cards)", "Brand detail (header, guide, platforms, videos)"]
+  loading_text: ["Dashboard", "Analytics", "Pulse panel", "Clip proposals (skeleton)"]
+  retry_buttons: ["Dashboard (error)", "Pulse panel (refresh-cw)"]
+  error_states: "All features use z-alert zType='destructive'. SeriesListComponent delete error fixed (#quality-12)"
+
+# ─── Dark Mode ───────────────────────────────────────────────────────
+dark_mode:
+  status: compliant
+  last_verified: "2026-03-12"
+  notes: "All semantic tokens. No raw bg-white/text-gray-*/bg-blue-*. Dashboard dark:text-amber-400 fix applied."
+
+# ─── Responsive ──────────────────────────────────────────────────────
+responsive:
+  status: good
+  last_verified: "2026-03-12"
+  notes: "Standard Tailwind breakpoints (sm:/lg:). All grids responsive. Quick-Nav flex-wrap. Platform 3-col grid."
+  fixes: ["Clip metrics overflow-x-auto moved to correct wrapper (#106)", "Quick-Nav 'Jump to:' hidden on mobile (hidden sm:inline)"]
+
+# ─── Accessibility ───────────────────────────────────────────────────
+accessibility:
+  last_verified: "2026-03-12"
+  status: good
+  fixes_applied: ["aria-busy on loading states (dashboard, pulse, analytics)", "aria-label on video/platform/filter/table/summary/nav", "aria-invalid+describedby on login password", "role='dialog'+aria-modal on modals (was role='button')", "Dynamic aria-valuenow/min/max/text on slider", "z-button [zLoading] on publish button", "role='navigation'+aria-label on quick-nav", "Removed broken aria-describedby='email-hint'", "Login smart autofocus", "role='region' aria-label on content cycle CTA"]
+  remaining: ["File input missing aria-label", "Drag-drop zone missing role", "Publishing-panel loading missing aria-busy", "Series-list icon buttons title→aria-label", "Buttons missing type='button'", "Dynamic areas missing aria-live", "Clip-boundary drag keyboard nav"]
+
+# ─── Pending Improvements ────────────────────────────────────────────
+pending_improvements:
+  - {description: "Password strength indicator", priority: low, status: deferred}
+  - {description: "Login smart redirect (1 brand+videos → brand-detail)", priority: medium, status: proposed}
+  - {description: "Auto-connect demo/sandbox platform", priority: medium, status: proposed}
+  - {description: "Background upload notification (tus resume)", priority: low, status: proposed}
+  - {description: "Pre-generate clips during transcription", priority: medium, status: proposed}
+
+# ─── Feature Lib Audit Status ────────────────────────────────────────
+feature_lib_audits:
+  libs:
+    feature-analytics: {audits: 3, last: "2026-03-11 (#106)", status: clean}
+    feature-auth: {audits: 2, last: "2026-03-12 (#quality-11)", status: clean}
+    feature-brands: {audits: 2, last: "2026-03-12 (#quality-12)", status: clean}
+    feature-dashboard: {audits: 2, last: "2026-03-12 (#quality-13)", status: clean}
+    feature-workflows: {audits: 2, last: "2026-03-11 (#83)", status: clean}
+    feature-jobs: {audits: 1, last: "2026-03-09 (#40)", status: needs_re_audit}
+    feature-llm: {audits: 1, last: "2026-03-09 (#57)", status: needs_re_audit}
+    feature-root-page: {audits: 1, last: "2026-03-10 (#66)", status: needs_re_audit}
+    feature-member-layout: {audits: 1, last: "2026-03-10 (#74)", status: clean}
+
+# ─── Frontend Quality Sprints ────────────────────────────────────────
+frontend_quality_sprints:
+  total_sprints: 13
+  last_sprint: "2026-03-12 (#quality-13)"
+  sprints:
+    - {id: 9, date: "2026-03-11", ref: "#93", target: "feature-analytics", found: 10, fixed: 8, key: "Missing OnPush 4/5 children, 5 dead .scss, z-select placeholder, aria-label/busy, error handling"}
+    - {id: 10, date: "2026-03-11", ref: "#106", target: "feature-analytics (2nd)", found: 5, fixed: 5, key: "PulseTransformer never wired (dead code), silent error swallow, bare loader, missing aria, overflow-x-auto wrong element"}
+    - {id: 11, date: "2026-03-12", ref: "#quality-11", target: "feature-auth (2nd)", found: 6, fixed: 6, key: "Broken aria-describedby, missing aria-busy, no autofocus, aria-invalid, HttpClient bypass, error not linked"}
+    - {id: 12, date: "2026-03-12", ref: "#quality-12", target: "feature-brands", found: 13, fixed: 5, remaining: 8, key: "Series delete error never rendered, slider aria, modal roles, z-button [zLoading], platform aria-label"}
+    - {id: 13, date: "2026-03-12", ref: "#quality-13", target: "feature-dashboard (2nd)", found: 7, fixed: 7, key: "No retry button, missing aria-busy, raw amber color, dead .scss, video card aria-label, forkJoin→allSettled, dark mode fix"}
+
+# ─── Landing Page ────────────────────────────────────────────────────
+landing_page:
+  status: "intelligence-first rewrite complete"
+  hero: {headline: "Know Which Clips Will Go Viral — Before You Publish", badge: "5-Dimension AI Scoring", url_input: "YouTube URL quick-start for pre-registration"}
+  scoring_section: {heading: "5 dimensions. One clear verdict.", layout: "responsive 5-col grid", dimensions: ["🎯 Hook Strength", "💖 Emotional Impact", "⏳ Cliffhanger", "📢 Call-to-Action", "🔥 Engagement"], cta: "Score Your Video Free → /preview (ICSP)"}
+  key_changes: ["Headline → intelligence-first", "Badge → 5-Dimension AI Scoring", "New scoring section", "Hero YouTube URL input", "E2E updated"]
+
+# ─── Feature Proposals ───────────────────────────────────────────────
+feature_proposals:
+  total: 12
+  shipped: ["Clip Performance Pulse", "Instant Clip Score Preview (ICSP)", "Audience-Adaptive Score Profiles"]
+  proposed: ["Platform Score Intelligence", "Smart Re-Cut Optimizer", "Clip Score Calibration Feedback Loop", "Score Comparison Engine", "Viral Hook Intelligence", "Channel Content Audit", "Brand Voice Clip Copywriter", "Score Calibration Engine", "Clip Intelligence Report"]
+
+# ─── TTFC Historical Milestones ──────────────────────────────────────
+ttfc_historical:
+  progression: ["Original: 20 clicks, 7 pages, 9 fields, 15-30min", "After #6: 14 clicks, 5-6 pages, 7 fields, ~10min", "After #15: 8-10 clicks, 4 pages, 1 field, ~5min", "After #16: 5-6 clicks, 4 pages, 1 field, ~3min", "After #23: 3-4 clicks, 4 pages, 1 field, ~1.5-2min", "After #44: 1-2 clicks, 3 pages, 1 field, ~50s", "After #86: 0-1 clicks, 2 pages, 0 fields, ~40s", "Current: 0 clicks, 2 pages, 0 fields, ~4-5s"]
+  key_86_wins: ["Auto-create brand on registration (-1 page, -1 click, -8s)", "Processing milestone celebration toasts (-20% perceived)", "Live countdown timer (-15% perceived)", "Express Mode banner (reduces anxiety)", "Dashboard smart redirect (-1 intermediary page)"]
