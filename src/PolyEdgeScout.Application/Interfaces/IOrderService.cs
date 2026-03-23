@@ -14,7 +14,9 @@ public interface IOrderService
     bool PaperMode { get; set; }
 
     PnlSnapshot GetPnlSnapshot();
+    Task InitializeAsync();
     Trade? EvaluateAndTrade(Market market, double modelProbability, CancellationToken ct = default);
     Task<Trade> ExecuteTradeAsync(Trade trade, CancellationToken ct = default);
-    void SettleTrade(string tradeId, bool won);
+    Task SettleTradeAsync(string tradeId, bool won);
+    void SettleTrade(string tradeId, bool won); // Keep sync version for backward compatibility
 }

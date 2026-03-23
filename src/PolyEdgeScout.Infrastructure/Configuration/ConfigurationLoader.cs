@@ -67,6 +67,9 @@ public static class ConfigurationLoader
         if (section["LogDirectory"] is string logDirectory)
             config.LogDirectory = logDirectory;
 
+        if (section["DatabaseConnectionString"] is string dbConnectionString)
+            config.DatabaseConnectionString = dbConnectionString;
+
         // 4. Override from environment variables (highest priority)
         if (Environment.GetEnvironmentVariable("POLYGON_RPC") is string envPolygonRpc)
             config.PolygonRpc = envPolygonRpc;
@@ -113,6 +116,9 @@ public static class ConfigurationLoader
 
         if (Environment.GetEnvironmentVariable("LOG_DIRECTORY") is string envLogDirectory)
             config.LogDirectory = envLogDirectory;
+
+        if (Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING") is string envDbConnectionString)
+            config.DatabaseConnectionString = envDbConnectionString;
 
         return config;
     }

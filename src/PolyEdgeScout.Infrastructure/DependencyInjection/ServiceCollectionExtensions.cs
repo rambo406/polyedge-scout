@@ -1,5 +1,6 @@
 namespace PolyEdgeScout.Infrastructure.DependencyInjection;
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PolyEdgeScout.Application.Configuration;
 using PolyEdgeScout.Application.Interfaces;
@@ -8,6 +9,9 @@ using PolyEdgeScout.Domain.Interfaces;
 using PolyEdgeScout.Infrastructure.ApiClients;
 using PolyEdgeScout.Infrastructure.Configuration;
 using PolyEdgeScout.Infrastructure.Logging;
+using PolyEdgeScout.Infrastructure.Persistence;
+using PolyEdgeScout.Infrastructure.Persistence.Repositories;
+using PolyEdgeScout.Infrastructure.Services;
 
 /// <summary>
 /// Extension methods for registering all PolyEdgeScout services into a DI container.
@@ -25,6 +29,20 @@ public static class ServiceCollectionExtensions
 
         // Logging (singleton — thread-safe, shared across app)
         services.AddSingleton<ILogService>(sp => new FileLogService(config.LogDirectory));
+
+        // EF Core — SQLite database
+        services.AddDbContext<TradingDbContext>(options =>
+            options.UseSqlite(config.DatabaseConnectionString));
+
+        // Repositories (scoped — one per DbContext lifetime)
+        services.AddScoped<ITradeRepository, TradeRepository>();
+        services.AddScoped<ITradeResultRepository, TradeResultRepository>();
+        services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+        services.AddScoped<IAppStateRepository, AppStateRepository>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+        // Audit service (scoped — uses scoped repository)
+        services.AddScoped<IAuditService, AuditService>();
 
         // HTTP clients (typed client factory pattern — auto-injects HttpClient)
         services.AddHttpClient<IGammaApiClient, GammaApiClient>(client =>

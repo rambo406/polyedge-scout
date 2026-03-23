@@ -18,4 +18,5 @@ public sealed class AppConfig
     public string BinanceApiBaseUrl { get; set; } = "https://api.binance.com";
     public string ClobBaseUrl { get; set; } = "https://clob.polymarket.com";
     public string LogDirectory { get; set; } = "logs";
+    public string DatabaseConnectionString { get; set; } = "Data Source=data/polyedge-scout.db";
 }

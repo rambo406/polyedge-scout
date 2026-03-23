@@ -1,9 +1,11 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PolyEdgeScout.Application.Interfaces;
 using PolyEdgeScout.Console.Commands;
 using PolyEdgeScout.Console.UI;
 using PolyEdgeScout.Domain.Interfaces;
 using PolyEdgeScout.Infrastructure.DependencyInjection;
+using PolyEdgeScout.Infrastructure.Persistence;
 using PolyEdgeScout.Application.Configuration;
 
 // Build DI container
@@ -23,6 +25,40 @@ var config = serviceProvider.GetRequiredService<AppConfig>();
 log.Info("PolyEdge Scout starting up...");
 log.Info($"Mode: {(config.PaperMode ? "PAPER" : "LIVE")}");
 log.Info($"Scan interval: {config.ScanIntervalSeconds}s");
+
+// Ensure database directory exists and apply migrations
+try
+{
+    var dbConnectionString = config.DatabaseConnectionString;
+    // Extract path from "Data Source=path" connection string
+    var dataSourcePrefix = "Data Source=";
+    if (dbConnectionString.StartsWith(dataSourcePrefix, StringComparison.OrdinalIgnoreCase))
+    {
+        var dbPath = dbConnectionString[dataSourcePrefix.Length..].Trim();
+        var dbDir = Path.GetDirectoryName(dbPath);
+        if (!string.IsNullOrEmpty(dbDir) && !Directory.Exists(dbDir))
+        {
+            Directory.CreateDirectory(dbDir);
+            log.Info($"Created database directory: {dbDir}");
+        }
+    }
+
+    using (var scope = serviceProvider.CreateScope())
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<TradingDbContext>();
+        await dbContext.Database.MigrateAsync();
+        log.Info("Database migrations applied successfully.");
+    }
+}
+catch (Exception ex)
+{
+    log.Error($"Database initialization failed: {ex.Message}", ex);
+    log.Warn("Continuing with in-memory state only.");
+}
+
+// Initialize OrderService — recover state from database
+var orderService = serviceProvider.GetRequiredService<IOrderService>();
+await orderService.InitializeAsync();
 
 // Parse command line args
 if (args.Length > 0 && args[0] == "--backtest")
