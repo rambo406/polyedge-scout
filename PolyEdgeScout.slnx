@@ -7,6 +7,8 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/PolyEdgeScout.Application.Tests/PolyEdgeScout.Application.Tests.csproj" />
+    <Project Path="tests/PolyEdgeScout.Architecture.Tests/PolyEdgeScout.Architecture.Tests.csproj" />
+    <Project Path="tests/PolyEdgeScout.Console.Tests/PolyEdgeScout.Console.Tests.csproj" />
     <Project Path="tests/PolyEdgeScout.Domain.Tests/PolyEdgeScout.Domain.Tests.csproj" />
     <Project Path="tests/PolyEdgeScout.Infrastructure.Tests/PolyEdgeScout.Infrastructure.Tests.csproj" />
   </Folder>

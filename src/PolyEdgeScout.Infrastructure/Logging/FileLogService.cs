@@ -18,6 +18,12 @@ public sealed class FileLogService : ILogService, IDisposable
     private string _currentLogDate = "";
 
     /// <summary>
+    /// Raised after a log entry is written to the buffer and file.
+    /// Parameters are (level, formattedLine).
+    /// </summary>
+    public event Action<string, string>? LogEntryWritten;
+
+    /// <summary>
     /// Initializes the log service, creating the log directory if it does not exist.
     /// </summary>
     /// <param name="logDirectory">Directory path for daily log files.</param>
@@ -88,14 +94,13 @@ public sealed class FileLogService : ILogService, IDisposable
                 _buffer.RemoveAt(0);
             _buffer.Add(line);
 
-            // Console output
-            Console.WriteLine(line);
-
             // File output — rotate daily
             EnsureWriter();
             _writer!.WriteLine(line);
             _writer.Flush();
         }
+
+        LogEntryWritten?.Invoke(level, line);
     }
 
     private void EnsureWriter()

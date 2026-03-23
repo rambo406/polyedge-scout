@@ -3,7 +3,7 @@ name: Task
 description: Persistent task loop — takes feedback, dispatches to subagents, loops back.
 argument-hint: A task or question to execute via subagent.
 disable-model-invocation: true
-agents: [planner, designer, coder, fastcoder, explore, code-reviewer]
+agents: [code-reviewer]
 tools: [vscode, execute, read/getNotebookSummary, read/problems, read/readFile, read/terminalSelection, read/terminalLastCommand, read/getTaskOutput, agent, edit, search, web, browser, 4regab.tasksync-chat/askUser]
 ---
 

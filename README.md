@@ -1,6 +1,6 @@
 # PolyEdge Scout 🔍
 
-A production-ready **Polymarket niche scanner bot** with a Terminal User Interface (TUI), built with **.NET 10** and **Spectre.Console**.
+A production-ready **Polymarket niche scanner bot** with a Terminal User Interface (TUI), built with **.NET 10** and **Terminal.Gui** (MVVM architecture).
 
 PolyEdge Scout continuously scans Polymarket for low-volume crypto micro-markets, estimates fair probabilities using real-time Binance price data and a volatility-scaled normal distribution model, identifies mispriced edges, and executes trades automatically — all from an interactive terminal dashboard.
 
@@ -14,7 +14,7 @@ PolyEdge Scout continuously scans Polymarket for low-volume crypto micro-markets
 | **📊 Probability Model** | Fetches real-time price + 24h volatility from Binance and computes the probability of a token reaching a target price using a volatility-scaled Normal CDF model with a conservative fade multiplier. |
 | **⚡ Edge Detection** | Compares model probability against the market's YES price to find mispriced opportunities. Only acts when edge exceeds a configurable minimum threshold (default 8%). |
 | **💰 Order Execution** | Supports both **paper trading** (simulated) and **live trading** via the Polymarket CLOB API with Nethereum EIP-712 signed orders on Polygon. Uses fractional Kelly criterion for position sizing. |
-| **🖥️ TUI Dashboard** | Rich terminal interface powered by Spectre.Console with real-time market table, P&L tracking, open positions, recent trades, and a live log feed — all updated every second. |
+| **🖥️ TUI Dashboard** | Rich terminal interface powered by Terminal.Gui with MVVM architecture — market scanner table, portfolio panel, recent trades, and live log feed. Menu bar, status bar, and keyboard shortcuts for all actions. |
 | **🧪 Backtesting** | Evaluates the probability model against historically resolved Polymarket markets, computing Brier score, calibration metrics, and hypothetical P&L. |
 
 ---
@@ -106,11 +106,12 @@ dotnet test PolyEdgeScout.slnx
 
 | Key | Action |
 |---|---|
-| `R` | Refresh — trigger an immediate market scan |
-| `T` | Toggle Paper/Live trading mode |
-| `Q` | Quit the application gracefully |
+| `F5` | Refresh — trigger an immediate market scan |
+| `Ctrl+T` | Toggle Paper/Live trading mode |
+| `Ctrl+Q` | Quit the application gracefully |
 | `↑` / `↓` | Navigate the market list |
 | `Enter` | Manually confirm a trade on the selected market |
+| `Tab` | Navigate between panels |
 
 ---
 
@@ -147,7 +148,7 @@ PolyEdge Scout follows **Clean Architecture** with four layers and strict depend
 | **Domain** | `PolyEdgeScout.Domain` | Core business entities (`Market`, `Trade`, `PnlSnapshot`, `TradeResult`), value objects (`BetSizing`, `EdgeCalculation`), enums (`TradeAction`, `TradeStatus`), domain services (`MathHelper`, `MarketClassifier`, `QuestionParser`), and core interfaces (`ILogService`). Zero external dependencies. |
 | **Application** | `PolyEdgeScout.Application` | Service interfaces (`IScannerService`, `IProbabilityModelService`, `IOrderService`, `IBacktestService`, `IBinanceApiClient`, `IGammaApiClient`, `IClobClient`), service implementations (`ScannerService`, `ProbabilityModelService`, `OrderService`, `BacktestService`), DTOs (`BinanceTickerResponse`, `GammaMarketResponse`, `MarketScanResult`, `BacktestResult`), configuration (`AppConfig`), and market mapping. Depends only on Domain. |
 | **Infrastructure** | `PolyEdgeScout.Infrastructure` | External concerns — API clients (`BinanceApiClient`, `GammaApiClient`, `PolymarketClobClient`), file-based logging (`FileLogService`), configuration loading (`ConfigurationLoader`), and DI container registration (`ServiceCollectionExtensions`). Depends on Application and Domain. |
-| **Console** | `PolyEdgeScout.Console` | Entry point and UI — `Program.cs` (DI host setup), `DashboardService` (Spectre.Console TUI with 3-thread architecture), and `BacktestCommand` (CLI backtest mode). Depends on all layers. |
+| **Console** | `PolyEdgeScout.Console` | Entry point and UI — `Program.cs` (DI host setup), Terminal.Gui MVVM dashboard (ViewModels + Views), `AppBootstrapper` (app lifecycle), and `BacktestCommand` (CLI backtest mode). Depends on all layers. |
 
 ### Key Services
 
@@ -157,7 +158,7 @@ PolyEdge Scout follows **Clean Architecture** with four layers and strict depend
 | **`ProbabilityModelService`** | Application | Fetches real-time price and 24h volatility from Binance. Computes the probability of a token reaching a target price using a volatility-scaled Normal CDF model. |
 | **`OrderService`** | Application | Manages the full trade lifecycle — evaluation, execution (paper or live via EIP-712 signed CLOB orders), and settlement. Thread-safe in-memory ledger with bankroll tracking. |
 | **`BacktestService`** | Application | Evaluates the model against historically resolved markets. Computes Brier score, calibration, and hypothetical P&L. |
-| **`DashboardService`** | Console | Three-thread TUI architecture: scan loop, input loop, and render loop. Renders market tables, P&L panels, open positions, and a live log feed with Spectre.Console. |
+| **`AppBootstrapper`** | Console | Manages Terminal.Gui application lifecycle. Initializes the MVVM dashboard with menu bar, status bar, market table, portfolio, trades, and log views. Starts background scan loop via DashboardViewModel. |
 | **`FileLogService`** | Infrastructure | Thread-safe logging to both a circular in-memory buffer (for TUI display) and daily rotating log files on disk. Supports INF/WRN/ERR/DBG levels. |
 | **`MathHelper`** | Domain | Pure C# implementations of `erf` (Abramowitz & Stegun 7.1.26), `NormCdf`, `KellyFraction`, and fractional Kelly bet sizing — no external math libraries needed. |
 
@@ -294,10 +295,24 @@ polyedge-scout/
 │       ├── Program.cs                            # DI host setup & entry point
 │       ├── appsettings.json                      # Application configuration
 │       ├── .env.example                          # Environment variable template
+│       ├── App/
+│       │   └── AppBootstrapper.cs                # Terminal.Gui lifecycle manager
 │       ├── Commands/
 │       │   └── BacktestCommand.cs                # CLI backtest mode
-│       └── UI/
-│           └── DashboardService.cs               # Spectre.Console TUI dashboard
+│       ├── ViewModels/
+│       │   ├── DashboardViewModel.cs             # Root VM — scan loop, mode toggle
+│       │   ├── MarketTableViewModel.cs           # Market list + trade execution
+│       │   ├── PortfolioViewModel.cs             # P&L snapshot display
+│       │   ├── TradesViewModel.cs                # Recent trades display
+│       │   ├── LogViewModel.cs                   # Log message buffer
+│       │   └── BacktestViewModel.cs              # Backtest execution
+│       └── Views/
+│           ├── MainWindow.cs                     # Root window layout
+│           ├── MarketTableView.cs                # TableView for markets
+│           ├── PortfolioView.cs                  # Portfolio panel
+│           ├── TradesView.cs                     # Recent trades panel
+│           ├── LogPanelView.cs                   # Log panel
+│           └── MenuBarFactory.cs                 # MenuBar + StatusBar creation
 │
 ├── tests/
 │   ├── PolyEdgeScout.Domain.Tests/              # Domain unit tests
@@ -316,7 +331,7 @@ polyedge-scout/
 
 | Package | Purpose |
 |---|---|
-| [Spectre.Console](https://spectreconsole.net/) `0.49.*` | Rich terminal UI rendering (tables, panels, layouts) |
+| [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui) `1.19.*` | Full TUI framework with MVVM support (windows, menus, tables, panels) |
 | [Microsoft.Extensions.Configuration](https://learn.microsoft.com/en-us/dotnet/core/extensions/configuration) `10.0.*` | Configuration from JSON + environment variables |
 | [Nethereum.Web3](https://nethereum.com/) `4.*` | Ethereum/Polygon Web3 integration |
 | [Nethereum.Signer](https://nethereum.com/) `4.*` | EIP-712 typed data signing for CLOB orders |

@@ -1,19 +1,35 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using PolyEdgeScout.Application.Configuration;
 using PolyEdgeScout.Application.Interfaces;
+using PolyEdgeScout.Console.App;
 using PolyEdgeScout.Console.Commands;
-using PolyEdgeScout.Console.UI;
+using PolyEdgeScout.Console.ViewModels;
+using PolyEdgeScout.Console.Views;
 using PolyEdgeScout.Domain.Interfaces;
 using PolyEdgeScout.Infrastructure.DependencyInjection;
 using PolyEdgeScout.Infrastructure.Persistence;
-using PolyEdgeScout.Application.Configuration;
 
 // Build DI container
 var services = new ServiceCollection();
 services.AddPolyEdgeScout();
 
-// Register console-specific services
-services.AddTransient<DashboardService>();
+// Register ViewModels (transient — created fresh per resolve)
+services.AddTransient<DashboardViewModel>();
+services.AddTransient<MarketTableViewModel>();
+services.AddTransient<PortfolioViewModel>();
+services.AddTransient<TradesViewModel>();
+services.AddTransient<LogViewModel>();
+services.AddTransient<BacktestViewModel>();
+
+// Register Views (transient — one instance per dashboard lifecycle)
+services.AddTransient<MarketTableView>();
+services.AddTransient<PortfolioView>();
+services.AddTransient<TradesView>();
+services.AddTransient<LogPanelView>();
+
+// Register App services
+services.AddTransient<AppBootstrapper>();
 services.AddTransient<BacktestCommand>();
 
 var serviceProvider = services.BuildServiceProvider();
@@ -30,7 +46,6 @@ log.Info($"Scan interval: {config.ScanIntervalSeconds}s");
 try
 {
     var dbConnectionString = config.DatabaseConnectionString;
-    // Extract path from "Data Source=path" connection string
     var dataSourcePrefix = "Data Source=";
     if (dbConnectionString.StartsWith(dataSourcePrefix, StringComparison.OrdinalIgnoreCase))
     {
@@ -76,11 +91,11 @@ else
         cts.Cancel();
     };
 
-    var dashboard = serviceProvider.GetRequiredService<DashboardService>();
+    var bootstrapper = serviceProvider.GetRequiredService<AppBootstrapper>();
 
     try
     {
-        await dashboard.RunAsync(cts.Token);
+        bootstrapper.Run(cts.Token);
     }
     catch (OperationCanceledException)
     {

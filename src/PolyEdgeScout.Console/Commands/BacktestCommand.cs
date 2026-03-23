@@ -1,119 +1,86 @@
 namespace PolyEdgeScout.Console.Commands;
 
+using SystemConsole = System.Console;
+using PolyEdgeScout.Console.ViewModels;
 using PolyEdgeScout.Application.DTOs;
-using PolyEdgeScout.Application.Interfaces;
 using PolyEdgeScout.Domain.Interfaces;
-using Spectre.Console;
 
 public sealed class BacktestCommand
 {
-    private readonly IBacktestService _backtestService;
+    private readonly BacktestViewModel _vm;
     private readonly ILogService _log;
 
-    public BacktestCommand(IBacktestService backtestService, ILogService log)
+    public BacktestCommand(BacktestViewModel vm, ILogService log)
     {
-        _backtestService = backtestService;
+        _vm = vm;
         _log = log;
     }
 
     public async Task ExecuteAsync(CancellationToken ct)
     {
-        AnsiConsole.Write(new FigletText("PolyEdge Scout").Color(Color.Cyan1));
-        AnsiConsole.MarkupLine("[bold]Backtest Mode[/]");
-        AnsiConsole.WriteLine();
+        SystemConsole.WriteLine();
+        SystemConsole.WriteLine("╔══════════════════════════════════════╗");
+        SystemConsole.WriteLine("║       PolyEdge Scout - Backtest      ║");
+        SystemConsole.WriteLine("╚══════════════════════════════════════╝");
+        SystemConsole.WriteLine();
 
-        var result = await AnsiConsole.Status()
-            .StartAsync("Running backtest...", async ctx =>
-            {
-                ctx.Spinner(Spinner.Known.Dots);
-                return await _backtestService.RunBacktestAsync(ct);
-            });
+        SystemConsole.Write("Running backtest...");
+        await _vm.RunBacktestAsync(ct);
+        SystemConsole.WriteLine(" Done!");
+        SystemConsole.WriteLine();
 
-        DisplayResults(result);
-    }
-
-    private void DisplayResults(BacktestResult result)
-    {
-        // Summary table
-        var summaryTable = new Table()
-            .Title("[bold cyan]Backtest Summary[/]")
-            .Border(TableBorder.Double)
-            .AddColumn("Metric")
-            .AddColumn("Value");
-
-        var brierColor = result.BrierScore < 0.20 ? "green" : result.BrierScore < 0.25 ? "yellow" : "red";
-        summaryTable.AddRow("Total Markets", $"{result.TotalMarkets}");
-        summaryTable.AddRow("Markets with Edge", $"{result.MarketsWithEdge}");
-        summaryTable.AddRow("Brier Score", $"[{brierColor}]{result.BrierScore:F4}[/]");
-        summaryTable.AddRow("Win Rate", $"{result.WinRate:P1}");
-        summaryTable.AddRow("Edge Accuracy", $"{result.EdgeAccuracy:P1}");
-
-        var pnlColor = result.HypotheticalPnl >= 0 ? "green" : "red";
-        summaryTable.AddRow("Hypothetical P&L", $"[{pnlColor}]${result.HypotheticalPnl:N2}[/]");
-
-        AnsiConsole.Write(summaryTable);
-        AnsiConsole.WriteLine();
-
-        // Calibration table
-        if (result.CalibrationBuckets.Count > 0)
+        if (_vm.Results is null)
         {
-            var calTable = new Table()
-                .Title("[bold cyan]Calibration[/]")
-                .Border(TableBorder.Rounded)
-                .AddColumn("Bucket")
-                .AddColumn("Predicted")
-                .AddColumn("Actual")
-                .AddColumn("Count")
-                .AddColumn("Delta");
-
-            foreach (var bucket in result.CalibrationBuckets)
-            {
-                var delta = bucket.AverageActual - bucket.AveragePredicted;
-                var deltaColor = Math.Abs(delta) < 0.1 ? "green" : Math.Abs(delta) < 0.2 ? "yellow" : "red";
-                calTable.AddRow(
-                    bucket.Range,
-                    $"{bucket.AveragePredicted:P1}",
-                    $"{bucket.AverageActual:P1}",
-                    $"{bucket.Count}",
-                    $"[{deltaColor}]{delta:+0.00;-0.00}[/]"
-                );
-            }
-
-            AnsiConsole.Write(calTable);
-            AnsiConsole.WriteLine();
+            SystemConsole.WriteLine("ERROR: No backtest results returned.");
+            return;
         }
 
-        // Market details table
+        DisplayResults(_vm.Results);
+    }
+
+    private static void DisplayResults(BacktestResult result)
+    {
+        // Summary
+        SystemConsole.WriteLine("┌─────────────────────────────────────┐");
+        SystemConsole.WriteLine("│         Backtest Summary            │");
+        SystemConsole.WriteLine("├──────────────────┬──────────────────┤");
+        SystemConsole.WriteLine($"│ Total Markets    │ {result.TotalMarkets,16} │");
+        SystemConsole.WriteLine($"│ Markets w/ Edge  │ {result.MarketsWithEdge,16} │");
+        SystemConsole.WriteLine($"│ Brier Score      │ {result.BrierScore,16:F4} │");
+        SystemConsole.WriteLine($"│ Win Rate         │ {result.WinRate,15:P1} │");
+        SystemConsole.WriteLine($"│ Edge Accuracy    │ {result.EdgeAccuracy,15:P1} │");
+        SystemConsole.WriteLine($"│ Hypothetical P&L │ {result.HypotheticalPnl,15:C2} │");
+        SystemConsole.WriteLine("└──────────────────┴──────────────────┘");
+        SystemConsole.WriteLine();
+
+        // Calibration
+        if (result.CalibrationBuckets.Count > 0)
+        {
+            SystemConsole.WriteLine("Calibration:");
+            SystemConsole.WriteLine($"  {"Bucket",-12} {"Predicted",10} {"Actual",10} {"Count",6} {"Delta",8}");
+            SystemConsole.WriteLine($"  {"------",-12} {"--------",10} {"------",10} {"-----",6} {"-----",8}");
+            foreach (var b in result.CalibrationBuckets)
+            {
+                var delta = b.AverageActual - b.AveragePredicted;
+                SystemConsole.WriteLine($"  {b.Range,-12} {b.AveragePredicted,10:P1} {b.AverageActual,10:P1} {b.Count,6} {delta,+8:+0.00;-0.00}");
+            }
+            SystemConsole.WriteLine();
+        }
+
+        // Market details
         if (result.Entries.Count > 0)
         {
-            var detailTable = new Table()
-                .Title("[bold cyan]Market Details[/]")
-                .Border(TableBorder.Rounded)
-                .AddColumn(new TableColumn("Market").Width(40))
-                .AddColumn("Model")
-                .AddColumn("Market")
-                .AddColumn("Edge")
-                .AddColumn("Actual")
-                .AddColumn("Correct?");
-
-            foreach (var entry in result.Entries.Take(30))
+            SystemConsole.WriteLine("Market Details (top 30):");
+            SystemConsole.WriteLine($"  {"Market",-40} {"Model",6} {"Mkt",6} {"Edge",7} {"Actual",6} {"OK?",4}");
+            SystemConsole.WriteLine($"  {"------",-40} {"-----",6} {"---",6} {"----",7} {"------",6} {"---",4}");
+            foreach (var e in result.Entries.Take(30))
             {
-                var question = entry.MarketQuestion.Length > 38
-                    ? entry.MarketQuestion[..37] + "…"
-                    : entry.MarketQuestion;
-                var icon = entry.ModelCorrect ? "[green]✅[/]" : "[red]❌[/]";
-
-                detailTable.AddRow(
-                    Markup.Escape(question),
-                    $"{entry.ModelProbability:F2}",
-                    $"{entry.MarketYesPrice:F2}",
-                    $"{entry.Edge:+0.00;-0.00}",
-                    $"{entry.ActualOutcome:F0}",
-                    icon
-                );
+                var question = e.MarketQuestion.Length > 38
+                    ? e.MarketQuestion[..37] + "…"
+                    : e.MarketQuestion;
+                var icon = e.ModelCorrect ? "✓" : "✗";
+                SystemConsole.WriteLine($"  {question,-40} {e.ModelProbability,6:F2} {e.MarketYesPrice,6:F2} {e.Edge,+7:+0.00;-0.00} {e.ActualOutcome,6:F0} {icon,4}");
             }
-
-            AnsiConsole.Write(detailTable);
         }
     }
 }

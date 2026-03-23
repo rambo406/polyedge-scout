@@ -65,6 +65,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IProbabilityModelService, ProbabilityModelService>();
         services.AddSingleton<IOrderService, OrderService>();
         services.AddTransient<IBacktestService, BacktestService>();
+        services.AddTransient<IScanOrchestrationService, ScanOrchestrationService>();
 
         return services;
     }
