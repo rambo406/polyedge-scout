@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PolyEdgeScout.Application/PolyEdgeScout.Application.csproj" />
+    <Project Path="src/PolyEdgeScout.Console/PolyEdgeScout.Console.csproj" />
+    <Project Path="src/PolyEdgeScout.Domain/PolyEdgeScout.Domain.csproj" />
+    <Project Path="src/PolyEdgeScout.Infrastructure/PolyEdgeScout.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PolyEdgeScout.Application.Tests/PolyEdgeScout.Application.Tests.csproj" />
+    <Project Path="tests/PolyEdgeScout.Domain.Tests/PolyEdgeScout.Domain.Tests.csproj" />
+    <Project Path="tests/PolyEdgeScout.Infrastructure.Tests/PolyEdgeScout.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>
