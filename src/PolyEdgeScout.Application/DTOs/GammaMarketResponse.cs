@@ -1,78 +1,78 @@
 namespace PolyEdgeScout.Application.DTOs;
 
-using System.Text.Json.Serialization;
-
 /// <summary>
 /// Raw token entry from the Gamma API response.
 /// </summary>
 public record GammaToken
 {
-    [JsonPropertyName("token_id")]
     public string TokenId { get; init; } = "";
 
-    [JsonPropertyName("outcome")]
     public string Outcome { get; init; } = "";
 
-    [JsonPropertyName("price")]
     public double Price { get; init; }
 }
 
 /// <summary>
 /// Raw market response from the Polymarket Gamma API.
+/// All properties rely on <c>PropertyNameCaseInsensitive = true</c> to match
+/// the Gamma API's camelCase field names (e.g., conditionId → ConditionId).
 /// </summary>
 public record GammaMarketResponse
 {
-    [JsonPropertyName("condition_id")]
     public string ConditionId { get; init; } = "";
 
-    [JsonPropertyName("question_id")]
+    /// <summary>
+    /// Gamma API uses <c>questionID</c> (uppercase ID) — matches case-insensitively.
+    /// </summary>
     public string QuestionId { get; init; } = "";
 
-    [JsonPropertyName("tokens")]
     public List<GammaToken> Tokens { get; init; } = [];
 
-    [JsonPropertyName("question")]
     public string Question { get; init; } = "";
 
-    [JsonPropertyName("description")]
     public string Description { get; init; } = "";
 
-    [JsonPropertyName("market_slug")]
-    public string MarketSlug { get; init; } = "";
+    /// <summary>
+    /// Market slug — mapped from <c>slug</c> (both endpoints use this field name).
+    /// </summary>
+    public string Slug { get; init; } = "";
 
-    [JsonPropertyName("end_date_iso")]
+    /// <summary>
+    /// Date-only end date (e.g., "2026-03-25").
+    /// </summary>
     public string? EndDateIso { get; init; }
 
-    [JsonPropertyName("game_start_time")]
+    /// <summary>
+    /// Full ISO 8601 end date/time (e.g., "2026-03-25T13:00:00Z").
+    /// Provides hour-level precision unlike <see cref="EndDateIso"/>.
+    /// </summary>
+    public string? EndDate { get; init; }
+
     public string? GameStartTime { get; init; }
 
-    [JsonPropertyName("active")]
     public bool Active { get; init; }
 
-    [JsonPropertyName("closed")]
     public bool Closed { get; init; }
 
-    [JsonPropertyName("volume")]
     public string? Volume { get; init; }
 
-    [JsonPropertyName("volume_num")]
     public double VolumeNum { get; init; }
 
-    [JsonPropertyName("liquidity")]
     public string? Liquidity { get; init; }
 
-    [JsonPropertyName("created_at")]
     public string? CreatedAt { get; init; }
 
-    [JsonPropertyName("outcomePrices")]
     public string? OutcomePrices { get; init; }
 
-    [JsonPropertyName("outcome")]
     public string? Outcome { get; init; }
 
-    [JsonPropertyName("resolution_source")]
     public string? ResolutionSource { get; init; }
 
-    [JsonPropertyName("resolved_by")]
     public string? ResolvedBy { get; init; }
+
+    /// <summary>
+    /// Serialized JSON array of CLOB token IDs (e.g., '["id1", "id2"]').
+    /// Used by markets fetched from the events endpoint where the <see cref="Tokens"/> array is absent.
+    /// </summary>
+    public string? ClobTokenIds { get; init; }
 }

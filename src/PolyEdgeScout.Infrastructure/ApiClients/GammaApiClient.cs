@@ -32,26 +32,43 @@ public sealed class GammaApiClient : IGammaApiClient
     public async Task<List<GammaMarketResponse>> FetchActiveMarketsAsync(CancellationToken ct = default)
     {
         var url = $"{_config.GammaApiBaseUrl}/markets"
-                + "?active=true&closed=false&volume_num_max=5000"
-                + "&order=created_at&ascending=false&limit=50";
+                + $"?active=true&closed=false&volume_num_min={_config.MinVolume}&volume_num_max={_config.MaxVolume}"
+                + "&order=createdAt&ascending=false&limit=50";
 
-        return await FetchWithRetryAsync(url, ct);
+        return await FetchWithRetryAsync<List<GammaMarketResponse>>(url, ct);
     }
 
     /// <inheritdoc />
     public async Task<List<GammaMarketResponse>> FetchResolvedMarketsAsync(int limit = 100, CancellationToken ct = default)
     {
         var url = $"{_config.GammaApiBaseUrl}/markets"
-                + $"?active=false&closed=true&order=end_date_iso&ascending=false&limit={limit}";
+                + $"?active=false&closed=true&order=endDateIso&ascending=false&limit={limit}";
 
-        return await FetchWithRetryAsync(url, ct);
+        return await FetchWithRetryAsync<List<GammaMarketResponse>>(url, ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<List<GammaEventResponse>> FetchActiveEventsAsync(CancellationToken ct = default)
+    {
+        int tagId = _config.ServerEventTagId;
+        string today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+
+        var url = $"{_config.GammaApiBaseUrl}/events"
+                + $"?tag_id={tagId}&active=true&closed=false"
+                + $"&end_date_min={today}"
+                + $"&volume_num_min={_config.MinVolume}&volume_num_max={_config.MaxVolume}"
+                + "&limit=500";
+
+        var events = await FetchWithRetryAsync<List<GammaEventResponse>>(url, ct);
+        _log.Info($"Fetched {events.Count} events for server tag {tagId} (end_date_min={today})");
+        return events;
     }
 
     /// <summary>
     /// Fetches a URL with exponential-backoff retry on HTTP 429 responses (max 3 retries).
-    /// Returns an empty list on total failure.
+    /// Returns a default instance of <typeparamref name="T"/> on total failure.
     /// </summary>
-    private async Task<List<GammaMarketResponse>> FetchWithRetryAsync(string url, CancellationToken ct)
+    private async Task<T> FetchWithRetryAsync<T>(string url, CancellationToken ct) where T : new()
     {
         const int maxRetries = 3;
         int delayMs = 1000;
@@ -69,7 +86,7 @@ public sealed class GammaApiClient : IGammaApiClient
                     if (attempt == maxRetries)
                     {
                         _log.Error($"Rate-limited after {maxRetries} retries: {url}");
-                        return [];
+                        return new T();
                     }
 
                     _log.Warn($"429 Too Many Requests — retrying in {delayMs}ms (attempt {attempt + 1}/{maxRetries})");
@@ -81,19 +98,28 @@ public sealed class GammaApiClient : IGammaApiClient
                 response.EnsureSuccessStatusCode();
                 string json = await response.Content.ReadAsStringAsync(ct);
 
-                List<GammaMarketResponse>? result = JsonSerializer.Deserialize<List<GammaMarketResponse>>(json, JsonOptions);
-                return result ?? [];
+                T? result = JsonSerializer.Deserialize<T>(json, JsonOptions);
+                return result ?? new T();
             }
             catch (OperationCanceledException)
             {
                 throw; // propagate cancellation
+            }
+            catch (HttpRequestException ex) when (
+                ex.StatusCode.HasValue
+                && (int)ex.StatusCode.Value >= 400
+                && (int)ex.StatusCode.Value < 500
+                && ex.StatusCode.Value != HttpStatusCode.TooManyRequests)
+            {
+                _log.Error($"Gamma API client error ({ex.StatusCode}): {url}", ex);
+                throw; // Client error — won't resolve with retry
             }
             catch (Exception ex)
             {
                 if (attempt == maxRetries)
                 {
                     _log.Error($"Gamma API request failed after {maxRetries + 1} attempts: {url}", ex);
-                    return [];
+                    return new T();
                 }
 
                 _log.Warn($"Gamma API request error (attempt {attempt + 1}/{maxRetries}): {ex.Message}. Retrying in {delayMs}ms");
@@ -103,6 +129,6 @@ public sealed class GammaApiClient : IGammaApiClient
         }
 
         // Unreachable, but satisfies the compiler
-        return [];
+        return new T();
     }
 }
