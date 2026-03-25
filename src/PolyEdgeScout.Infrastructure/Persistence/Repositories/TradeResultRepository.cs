@@ -18,4 +18,9 @@ public sealed class TradeResultRepository(TradingDbContext context) : ITradeResu
 
     public async Task<TradeResult?> GetByTradeIdAsync(string tradeId)
         => await context.TradeResults.FirstOrDefaultAsync(r => r.TradeId == tradeId);
+
+    public async Task DeleteAllAsync()
+    {
+        await context.TradeResults.ExecuteDeleteAsync();
+    }
 }

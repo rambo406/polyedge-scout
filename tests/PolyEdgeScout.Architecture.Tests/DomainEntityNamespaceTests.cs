@@ -30,6 +30,7 @@ public sealed class DomainEntityNamespaceTests
         {
             "PolyEdgeScout.Domain.Entities",
             "PolyEdgeScout.Domain.ValueObjects",
+            "PolyEdgeScout.Domain.Services",
         };
 
         var misplaced = sealedTypes

@@ -12,4 +12,7 @@ public interface IGammaApiClient
 
     /// <summary>Fetches resolved/closed markets for backtesting.</summary>
     Task<List<GammaMarketResponse>> FetchResolvedMarketsAsync(int limit = 100, CancellationToken ct = default);
+
+    /// <summary>Fetches active crypto events from the Gamma API events endpoint with tag-based filtering.</summary>
+    Task<List<GammaEventResponse>> FetchActiveEventsAsync(CancellationToken ct = default);
 }

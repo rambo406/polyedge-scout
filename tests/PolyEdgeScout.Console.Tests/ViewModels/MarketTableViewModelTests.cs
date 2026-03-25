@@ -6,6 +6,7 @@ using PolyEdgeScout.Application.DTOs;
 using PolyEdgeScout.Application.Interfaces;
 using PolyEdgeScout.Console.ViewModels;
 using PolyEdgeScout.Domain.Entities;
+using PolyEdgeScout.Domain.Enums;
 using PolyEdgeScout.Domain.Interfaces;
 using Xunit;
 
@@ -26,7 +27,7 @@ public class MarketTableViewModelTests
 
         var markets = new List<MarketScanResult>
         {
-            new() { Market = new Market { Question = "Test" }, Edge = 0.1, ModelProbability = 0.5, Action = "BUY" }
+            new() { Market = new Market { Question = "Test" }, Edge = 0.1, ModelProbability = 0.5, Action = TradeAction.Buy }
         };
         vm.UpdateMarkets(markets);
 
@@ -49,7 +50,7 @@ public class MarketTableViewModelTests
     public async Task ExecuteTradeAsync_InsufficientEdge_LogsWarning()
     {
         var vm = CreateVm();
-        vm.UpdateMarkets([new() { Market = new Market { Question = "Low" }, Edge = 0.01, ModelProbability = 0.3, Action = "HOLD" }]);
+        vm.UpdateMarkets([new() { Market = new Market { Question = "Low" }, Edge = 0.01, ModelProbability = 0.3, Action = TradeAction.Hold }]);
         vm.SelectedIndex = 0;
 
         await vm.ExecuteTradeAsync();
@@ -61,11 +62,11 @@ public class MarketTableViewModelTests
     public async Task ExecuteTradeAsync_WithEdge_ExecutesTrade()
     {
         var trade = new Trade { Id = "t1" };
-        _orderService.EvaluateAndTrade(Arg.Any<Market>(), Arg.Any<double>(), Arg.Any<CancellationToken>()).Returns(trade);
+        _orderService.EvaluateAndTrade(Arg.Any<Market>(), Arg.Any<double>(), Arg.Any<double?>(), Arg.Any<double?>(), Arg.Any<CancellationToken>()).Returns(trade);
         _orderService.ExecuteTradeAsync(trade, Arg.Any<CancellationToken>()).Returns(trade);
 
         var vm = CreateVm();
-        vm.UpdateMarkets([new() { Market = new Market { Question = "Good" }, Edge = 0.15, ModelProbability = 0.6, Action = "BUY" }]);
+        vm.UpdateMarkets([new() { Market = new Market { Question = "Good" }, Edge = 0.15, ModelProbability = 0.6, Action = TradeAction.Buy }]);
         vm.SelectedIndex = 0;
 
         await vm.ExecuteTradeAsync();
@@ -80,6 +81,6 @@ public class MarketTableViewModelTests
         // Empty markets, index out of range
         await vm.ExecuteTradeAsync();
 
-        _orderService.DidNotReceive().EvaluateAndTrade(Arg.Any<Market>(), Arg.Any<double>(), Arg.Any<CancellationToken>());
+        _orderService.DidNotReceive().EvaluateAndTrade(Arg.Any<Market>(), Arg.Any<double>(), Arg.Any<double?>(), Arg.Any<double?>(), Arg.Any<CancellationToken>());
     }
 }

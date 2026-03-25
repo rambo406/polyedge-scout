@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\src\PolyEdgeScout.Domain\PolyEdgeScout.Domain.csproj" />
     <ProjectReference Include="..\..\src\PolyEdgeScout.Application\PolyEdgeScout.Application.csproj" />
     <ProjectReference Include="..\..\src\PolyEdgeScout.Infrastructure\PolyEdgeScout.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\PolyEdgeScout.Console\PolyEdgeScout.Console.csproj" />
   </ItemGroup>
 
 </Project>

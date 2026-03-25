@@ -6,6 +6,7 @@ using PolyEdgeScout.Application.Configuration;
 using PolyEdgeScout.Application.Interfaces;
 using PolyEdgeScout.Application.Services;
 using PolyEdgeScout.Domain.Interfaces;
+using PolyEdgeScout.Domain.Services;
 using PolyEdgeScout.Infrastructure.ApiClients;
 using PolyEdgeScout.Infrastructure.Configuration;
 using PolyEdgeScout.Infrastructure.Logging;
@@ -66,6 +67,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IOrderService, OrderService>();
         services.AddTransient<IBacktestService, BacktestService>();
         services.AddTransient<IScanOrchestrationService, ScanOrchestrationService>();
+
+        // Edge backtest (Singleton — ViewModel subscribes to its events)
+        services.AddSingleton<IEdgeBacktestService, EdgeBacktestService>();
+
+        // Edge formula implementations (registered as IEnumerable<IEdgeFormula>)
+        services.AddSingleton<IEdgeFormula, DefaultScaledEdgeFormula>();
+        services.AddSingleton<IEdgeFormula, BaseEdgeFormula>();
 
         return services;
     }

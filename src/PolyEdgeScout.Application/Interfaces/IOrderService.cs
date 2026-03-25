@@ -15,8 +15,14 @@ public interface IOrderService
 
     PnlSnapshot GetPnlSnapshot();
     Task InitializeAsync();
-    Trade? EvaluateAndTrade(Market market, double modelProbability, CancellationToken ct = default);
+    Trade? EvaluateAndTrade(Market market, double modelProbability, double? targetPrice = null, double? currentAssetPrice = null, CancellationToken ct = default);
     Task<Trade> ExecuteTradeAsync(Trade trade, CancellationToken ct = default);
     Task SettleTradeAsync(string tradeId, bool won);
     void SettleTrade(string tradeId, bool won); // Keep sync version for backward compatibility
+
+    /// <summary>
+    /// Resets all paper trading state: clears trades, resets bankroll to $10,000.
+    /// Only available in Paper mode.
+    /// </summary>
+    Task ResetPaperTradingAsync();
 }

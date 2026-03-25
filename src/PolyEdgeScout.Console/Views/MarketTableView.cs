@@ -51,7 +51,7 @@ public sealed class MarketTableView : FrameView
 
     private void OnMarketsUpdated()
     {
-        Application.Invoke(() =>
+        App?.Invoke(() =>
         {
             _table.Table = new MarketTableSource(_vm.Markets);
             _table.Update();

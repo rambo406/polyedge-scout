@@ -17,7 +17,7 @@ public sealed class TradesView : FrameView
 
     public TradesView(TradesViewModel vm) : base()
     {
-        Title = "Last 5 Trades";
+        Title = "Recent Settlements";
         _vm = vm;
 
         _listView = new ListView
@@ -36,7 +36,7 @@ public sealed class TradesView : FrameView
 
     private void OnTradesUpdated()
     {
-        Application.Invoke(() =>
+        App?.Invoke(() =>
         {
             _items.Clear();
             foreach (var t in _vm.RecentTrades.Take(5))
@@ -49,7 +49,10 @@ public sealed class TradesView : FrameView
                 _items.Add($"{icon} {question}  {pnl}  {t.Roi:P0}");
             }
             if (_items.Count == 0)
-                _items.Add("No trades yet");
+            {
+                _items.Add("No settlements yet");
+                _items.Add("(Ctrl+O for all trades)");
+            }
             _listView.Source = new ListWrapper<string>(new ObservableCollection<string>(_items));
         });
     }

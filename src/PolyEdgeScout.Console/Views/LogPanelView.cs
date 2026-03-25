@@ -36,7 +36,7 @@ public sealed class LogPanelView : FrameView
 
     private void OnMessageAdded()
     {
-        Application.Invoke(() =>
+        App?.Invoke(() =>
         {
             _items.Clear();
             // Show last 50 messages (most recent at bottom)

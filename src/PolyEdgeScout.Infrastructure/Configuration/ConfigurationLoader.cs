@@ -40,6 +40,9 @@ public static class ConfigurationLoader
         if (double.TryParse(section["MaxVolume"], out double maxVolume))
             config.MaxVolume = maxVolume;
 
+        if (double.TryParse(section["MinVolume"], out double minVolume))
+            config.MinVolume = minVolume;
+
         if (double.TryParse(section["MinEdge"], out double minEdge))
             config.MinEdge = minEdge;
 
@@ -64,6 +67,24 @@ public static class ConfigurationLoader
         if (section["ClobBaseUrl"] is string clobBaseUrl)
             config.ClobBaseUrl = clobBaseUrl;
 
+        // Bind ServerEventTagId from configuration
+        if (int.TryParse(section["ServerEventTagId"], out int serverEventTagId))
+            config.ServerEventTagId = serverEventTagId;
+
+        // Bind InMemoryEventTagIds array from configuration
+        var inMemoryTagIdsSection = section.GetSection("InMemoryEventTagIds");
+        if (inMemoryTagIdsSection.Exists())
+        {
+            var tagIds = inMemoryTagIdsSection.GetChildren()
+                .Select(c => int.TryParse(c.Value, out int v) ? v : (int?)null)
+                .Where(v => v.HasValue)
+                .Select(v => v!.Value)
+                .ToList();
+
+            if (tagIds.Count > 0)
+                config.InMemoryEventTagIds = tagIds;
+        }
+
         if (section["LogDirectory"] is string logDirectory)
             config.LogDirectory = logDirectory;
 
@@ -84,6 +105,10 @@ public static class ConfigurationLoader
         if (Environment.GetEnvironmentVariable("MAX_VOLUME") is string envMaxVolume
             && double.TryParse(envMaxVolume, out double envMaxVolumeVal))
             config.MaxVolume = envMaxVolumeVal;
+
+        if (Environment.GetEnvironmentVariable("MIN_VOLUME") is string envMinVolume
+            && double.TryParse(envMinVolume, out double envMinVolumeVal))
+            config.MinVolume = envMinVolumeVal;
 
         if (Environment.GetEnvironmentVariable("MIN_EDGE") is string envMinEdge
             && double.TryParse(envMinEdge, out double envMinEdgeVal))
@@ -113,6 +138,24 @@ public static class ConfigurationLoader
 
         if (Environment.GetEnvironmentVariable("CLOB_BASE_URL") is string envClobBaseUrl)
             config.ClobBaseUrl = envClobBaseUrl;
+
+        // SERVER_EVENT_TAG_ID env var: single tag ID for server-side filtering
+        if (Environment.GetEnvironmentVariable("SERVER_EVENT_TAG_ID") is string envServerEventTagId
+            && int.TryParse(envServerEventTagId, out int envServerEventTagIdVal))
+            config.ServerEventTagId = envServerEventTagIdVal;
+
+        // IN_MEMORY_EVENT_TAG_IDS env var: comma-separated list of tag IDs (e.g., "21")
+        if (Environment.GetEnvironmentVariable("IN_MEMORY_EVENT_TAG_IDS") is string envInMemoryTagIds)
+        {
+            var tagIds = envInMemoryTagIds.Split(',')
+                .Select(s => int.TryParse(s.Trim(), out int v) ? v : (int?)null)
+                .Where(v => v.HasValue)
+                .Select(v => v!.Value)
+                .ToList();
+
+            if (tagIds.Count > 0)
+                config.InMemoryEventTagIds = tagIds;
+        }
 
         if (Environment.GetEnvironmentVariable("LOG_DIRECTORY") is string envLogDirectory)
             config.LogDirectory = envLogDirectory;

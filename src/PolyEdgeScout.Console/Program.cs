@@ -8,25 +8,34 @@ using PolyEdgeScout.Console.ViewModels;
 using PolyEdgeScout.Console.Views;
 using PolyEdgeScout.Domain.Interfaces;
 using PolyEdgeScout.Infrastructure.DependencyInjection;
+using PolyEdgeScout.Infrastructure.Logging;
 using PolyEdgeScout.Infrastructure.Persistence;
 
 // Build DI container
 var services = new ServiceCollection();
 services.AddPolyEdgeScout();
 
-// Register ViewModels (transient — created fresh per resolve)
-services.AddTransient<DashboardViewModel>();
-services.AddTransient<MarketTableViewModel>();
-services.AddTransient<PortfolioViewModel>();
-services.AddTransient<TradesViewModel>();
-services.AddTransient<LogViewModel>();
-services.AddTransient<BacktestViewModel>();
+// Register ViewModels (singleton — shared instances ensure VM↔View event wiring works)
+services.AddSingleton<DashboardViewModel>();
+services.AddSingleton<MarketTableViewModel>();
+services.AddSingleton<PortfolioViewModel>();
+services.AddSingleton<TradesViewModel>();
+services.AddSingleton<LogViewModel>();
+services.AddSingleton<BacktestViewModel>();
+services.AddSingleton<FullLogViewModel>();
+services.AddSingleton<TradesManagementViewModel>();
+services.AddSingleton<EdgeBacktestViewModel>();
 
 // Register Views (transient — one instance per dashboard lifecycle)
 services.AddTransient<MarketTableView>();
 services.AddTransient<PortfolioView>();
 services.AddTransient<TradesView>();
 services.AddTransient<LogPanelView>();
+services.AddTransient<ErrorIndicatorView>();
+services.AddTransient<FullLogView>();
+services.AddTransient<TradesManagementView>();
+services.AddTransient<BacktestView>();
+services.AddTransient<EdgeBacktestView>();
 
 // Register App services
 services.AddTransient<AppBootstrapper>();
@@ -41,6 +50,13 @@ var config = serviceProvider.GetRequiredService<AppConfig>();
 log.Info("PolyEdge Scout starting up...");
 log.Info($"Mode: {(config.PaperMode ? "PAPER" : "LIVE")}");
 log.Info($"Scan interval: {config.ScanIntervalSeconds}s");
+
+// Wire FileLogService events to FullLogViewModel for TUI log display
+var fullLogVm = serviceProvider.GetRequiredService<FullLogViewModel>();
+if (log is FileLogService fileLogService)
+{
+    fileLogService.LogEntryWritten += fullLogVm.OnLogEntry;
+}
 
 // Ensure database directory exists and apply migrations
 try

@@ -35,7 +35,7 @@ public sealed class PortfolioView : FrameView
 
     private void OnSnapshotUpdated()
     {
-        Application.Invoke(() =>
+        App?.Invoke(() =>
         {
             var s = _vm.Snapshot;
             _bankrollLabel.Text = $"Bankroll:     ${s.Bankroll:N2}";

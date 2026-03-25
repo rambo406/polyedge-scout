@@ -24,7 +24,7 @@ public sealed class MarketTableSource : ITableSource
         3 => $"${_markets[row].Market.Volume:N0}",
         4 => _markets[row].ModelProbability.ToString("F2"),
         5 => _markets[row].Edge.ToString("+0.00;-0.00"),
-        6 => _markets[row].Action,
+        6 => _markets[row].Action.ToString(),
         _ => ""
     };
 

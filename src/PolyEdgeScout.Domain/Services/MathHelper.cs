@@ -99,4 +99,30 @@ public static class MathHelper
 
         return Math.Max(0, Math.Min(betSize, cap));
     }
+
+    /// <summary>
+    /// Calculates the price drift (momentum) from kline close prices.
+    /// Returns the percentage change from the first to the last close price.
+    /// </summary>
+    /// <param name="closePrices">Ordered list of closing prices (oldest first).</param>
+    /// <returns>Drift as a decimal (e.g., 0.02 = 2% up). Returns 0 if fewer than 2 prices.</returns>
+    public static double CalculateDrift(IReadOnlyList<double> closePrices)
+    {
+        if (closePrices.Count < 2 || closePrices[0] <= 0)
+            return 0.0;
+
+        return (closePrices[^1] - closePrices[0]) / closePrices[0];
+    }
+
+    /// <summary>
+    /// Clamps drift to within ±maxDrift to prevent extreme outliers.
+    /// Default maxDrift is 0.10 (10%).
+    /// </summary>
+    /// <param name="drift">The raw drift value.</param>
+    /// <param name="maxDrift">Maximum absolute drift allowed (default 0.10).</param>
+    /// <returns>Drift clamped to [-maxDrift, maxDrift].</returns>
+    public static double ClampDrift(double drift, double maxDrift = 0.10)
+    {
+        return Math.Clamp(drift, -maxDrift, maxDrift);
+    }
 }

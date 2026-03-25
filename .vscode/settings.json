@@ -26,6 +26,9 @@
     "github.copilot.chat.languageContext.typescript.enabled": true,
     "github.copilot.chat.notebook.followCellExecution.enabled": true,
     "github.copilot.chat.omitBaseAgentInstructions": true,
+    "github.copilot.chat.reasoningEffort": {
+        "gpt-5-mini": "xhigh"
+    },
     "github.copilot.chat.responsesApiReasoningEffort": "xhigh",
     "github.copilot.chat.responsesApiReasoningSummary": "off",
     "github.copilot.chat.scopeSelection": true,

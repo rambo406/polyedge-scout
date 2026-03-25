@@ -18,6 +18,7 @@ public sealed class DashboardViewModel
     public MarketTableViewModel MarketTable { get; }
     public PortfolioViewModel Portfolio { get; }
     public TradesViewModel Trades { get; }
+    public TradesManagementViewModel TradesManagement { get; }
     public LogViewModel Log { get; }
 
     public bool IsScanning { get; private set; }
@@ -40,6 +41,7 @@ public sealed class DashboardViewModel
         MarketTableViewModel marketTable,
         PortfolioViewModel portfolio,
         TradesViewModel trades,
+        TradesManagementViewModel tradesManagement,
         LogViewModel logVm)
     {
         _orchestrator = orchestrator;
@@ -49,6 +51,7 @@ public sealed class DashboardViewModel
         MarketTable = marketTable;
         Portfolio = portfolio;
         Trades = trades;
+        TradesManagement = tradesManagement;
         Log = logVm;
     }
 
@@ -70,6 +73,7 @@ public sealed class DashboardViewModel
                 var pnl = _orderService.GetPnlSnapshot();
                 Portfolio.UpdateSnapshot(pnl);
                 Trades.UpdateTrades(pnl.LastTrades);
+                TradesManagement.RefreshTrades();
 
                 LastScanTime = DateTime.UtcNow;
                 Log.AddMessage("Scan cycle completed");
@@ -119,5 +123,35 @@ public sealed class DashboardViewModel
     public void RequestQuit()
     {
         QuitRequested?.Invoke();
+    }
+
+    /// <summary>
+    /// Resets paper trading state.
+    /// Clears all trades, resets bankroll, and refreshes views.
+    /// </summary>
+    public async Task ResetPaperTradingAsync()
+    {
+        if (!PaperMode)
+        {
+            Log.AddMessage("Reset is only available in Paper mode");
+            return;
+        }
+
+        try
+        {
+            await _orderService.ResetPaperTradingAsync();
+
+            var pnl = _orderService.GetPnlSnapshot();
+            Portfolio.UpdateSnapshot(pnl);
+            Trades.UpdateTrades(pnl.LastTrades);
+            TradesManagement.RefreshTrades();
+
+            Log.AddMessage("\u2713 Paper trading reset: bankroll restored to $10,000");
+        }
+        catch (Exception ex)
+        {
+            _log.Error("Paper trading reset failed", ex);
+            Log.AddMessage($"ERROR: Reset failed \u2014 {ex.Message}");
+        }
     }
 }

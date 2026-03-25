@@ -2,6 +2,7 @@ namespace PolyEdgeScout.Domain.Services;
 
 using System.Globalization;
 using System.Text.RegularExpressions;
+using PolyEdgeScout.Domain.Enums;
 
 /// <summary>
 /// Extracts structured data (token symbols, target prices) from market question text.
@@ -113,4 +114,70 @@ public static partial class QuestionParser
     /// </summary>
     public static (string? Symbol, double? TargetPrice) Parse(string question)
         => (ExtractTokenSymbol(question), ExtractTargetPrice(question));
+
+    /// <summary>
+    /// Extracts the direction from directional market questions
+    /// such as "up or down" or "higher or lower".
+    /// </summary>
+    public static MarketDirection? ExtractDirection(string question)
+    {
+        if (string.IsNullOrWhiteSpace(question)) return null;
+
+        // Match "up or down" / "higher or lower"
+        if (Regex.IsMatch(question, @"\b(up\s+or\s+down|higher\s+or\s+lower)\b", RegexOptions.IgnoreCase))
+            return MarketDirection.Up; // "Up or Down" markets have the "Up" side as YES
+
+        return null;
+    }
+
+    /// <summary>
+    /// Extracts a time window from the market question (e.g., "9:45AM-10:00AM ET").
+    /// </summary>
+    public static (TimeOnly? Start, TimeOnly? End, string? Timezone) ExtractTimeWindow(string question)
+    {
+        if (string.IsNullOrWhiteSpace(question)) return (null, null, null);
+
+        // Match patterns like "9:45AM-10:00AM ET" or "9:45 AM - 10:00 PM EST"
+        var match = Regex.Match(
+            question,
+            @"(\d{1,2}:\d{2}\s*(?:AM|PM))\s*[-\u2013]\s*(\d{1,2}:\d{2}\s*(?:AM|PM))\s*(ET|EST|UTC|PT|PST|CT|CST|MT|MST)?",
+            RegexOptions.IgnoreCase);
+
+        if (!match.Success) return (null, null, null);
+
+        if (TimeOnly.TryParse(match.Groups[1].Value.Replace(" ", ""), out var start) &&
+            TimeOnly.TryParse(match.Groups[2].Value.Replace(" ", ""), out var end))
+        {
+            var tz = match.Groups[3].Success ? match.Groups[3].Value.ToUpperInvariant() : null;
+            return (start, end, tz);
+        }
+
+        return (null, null, null);
+    }
+
+    /// <summary>
+    /// Parses a market question and returns a strongly-typed <see cref="ParseResult"/>
+    /// indicating the market type and extracted data.
+    /// </summary>
+    public static ParseResult ParseStructured(string question)
+    {
+        var symbol = ExtractTokenSymbol(question);
+        if (symbol is null)
+            return new ParseResult.Unrecognised();
+
+        // Check for directional market first
+        var direction = ExtractDirection(question);
+        if (direction is not null)
+        {
+            var (windowStart, windowEnd, timezone) = ExtractTimeWindow(question);
+            return new ParseResult.Directional(symbol, direction.Value, windowStart, windowEnd, timezone);
+        }
+
+        // Check for price target market
+        var targetPrice = ExtractTargetPrice(question);
+        if (targetPrice is not null)
+            return new ParseResult.PriceTarget(symbol, targetPrice.Value);
+
+        return new ParseResult.Unrecognised();
+    }
 }

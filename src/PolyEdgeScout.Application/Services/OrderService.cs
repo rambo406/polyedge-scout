@@ -6,6 +6,7 @@ using PolyEdgeScout.Application.Interfaces;
 using PolyEdgeScout.Domain.Entities;
 using PolyEdgeScout.Domain.Enums;
 using PolyEdgeScout.Domain.Interfaces;
+using PolyEdgeScout.Domain.Services;
 using PolyEdgeScout.Domain.ValueObjects;
 
 /// <summary>
@@ -17,6 +18,8 @@ using PolyEdgeScout.Domain.ValueObjects;
 /// </summary>
 public sealed class OrderService : IOrderService
 {
+    private static readonly IEdgeFormula EdgeFormula = new DefaultScaledEdgeFormula();
+
     private readonly AppConfig _config;
     private readonly IClobClient _clobClient;
     private readonly ILogService _log;
@@ -179,17 +182,20 @@ public sealed class OrderService : IOrderService
     }
 
     /// <inheritdoc />
-    public Trade? EvaluateAndTrade(Market market, double modelProbability, CancellationToken ct = default)
+    public Trade? EvaluateAndTrade(Market market, double modelProbability, double? targetPrice = null, double? currentAssetPrice = null, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
 
-        var edge = new EdgeCalculation
-        {
-            ModelProbability = modelProbability,
-            MarketPrice = market.YesPrice,
-        };
+        var edge = EdgeCalculation.Create(
+            EdgeFormula,
+            modelProbability,
+            market.YesPrice,
+            targetPrice,
+            currentAssetPrice);
 
-        if (!edge.HasSufficientEdge(_config.MinEdge))
+        var action = edge.DetermineAction(_config.MinEdge);
+
+        if (action is TradeAction.Hold)
         {
             _log.Debug($"HOLD — edge {edge.Edge:P2} below min {_config.MinEdge:P2}: {Truncate(market.Question)}");
             return null;
@@ -201,10 +207,14 @@ public sealed class OrderService : IOrderService
             return null;
         }
 
+        // For SELL, use probability of NO and the NoPrice as entry
+        double sizingProbability = action is TradeAction.Sell ? 1.0 - modelProbability : modelProbability;
+        double entryPrice = action is TradeAction.Sell ? market.NoPrice : market.YesPrice;
+
         // Size the bet using domain BetSizing value object
         var sizing = BetSizing.Calculate(
-            modelProbability,
-            market.YesPrice,
+            sizingProbability,
+            entryPrice,
             _bankroll,
             _config.DefaultBetSize,
             _config.KellyFraction,
@@ -223,9 +233,9 @@ public sealed class OrderService : IOrderService
             MarketQuestion = market.Question,
             ConditionId = market.ConditionId,
             TokenId = market.TokenId,
-            Action = TradeAction.Buy,
+            Action = action,
             Status = TradeStatus.Pending,
-            EntryPrice = market.YesPrice,
+            EntryPrice = entryPrice,
             Shares = sizing.Shares,
             ModelProbability = modelProbability,
             Edge = edge.Edge,
@@ -234,8 +244,8 @@ public sealed class OrderService : IOrderService
         };
 
         _log.Info(
-            $"TRADE SIGNAL: {Truncate(market.Question)} | " +
-            $"Edge={edge.Edge:P2} ModelP={modelProbability:P2} Price={market.YesPrice:F3} " +
+            $"TRADE SIGNAL ({action}): {Truncate(market.Question)} | " +
+            $"Edge={edge.Edge:P2} ModelP={modelProbability:P2} Price={entryPrice:F3} " +
             $"Bet=${betSize:F2} Shares={sizing.Shares:F2}");
 
         return trade;
@@ -357,6 +367,52 @@ public sealed class OrderService : IOrderService
     {
         // Synchronous wrapper for backward compatibility
         SettleTradeAsync(tradeId, won).GetAwaiter().GetResult();
+    }
+
+    /// <inheritdoc />
+    public async Task ResetPaperTradingAsync()
+    {
+        if (!_paperMode)
+        {
+            throw new InvalidOperationException("Cannot reset trades in Live mode");
+        }
+
+        lock (_lock)
+        {
+            _openTrades.Clear();
+            _settledTrades.Clear();
+            _bankroll = 10_000.0;
+        }
+
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var tradeRepo = scope.ServiceProvider.GetRequiredService<ITradeRepository>();
+            var tradeResultRepo = scope.ServiceProvider.GetRequiredService<ITradeResultRepository>();
+            var appStateRepo = scope.ServiceProvider.GetRequiredService<IAppStateRepository>();
+            var auditService = scope.ServiceProvider.GetRequiredService<IAuditService>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+            string correlationId = Guid.NewGuid().ToString("N");
+
+            await unitOfWork.BeginTransactionAsync();
+
+            await tradeRepo.DeleteAllAsync();
+            await tradeResultRepo.DeleteAllAsync();
+            await appStateRepo.SetBankrollAsync(10_000.0);
+
+            await auditService.LogAsync(
+                "AppState", "PaperReset", AuditAction.Deleted, correlationId,
+                newValue: "Paper trading reset: bankroll restored to $10,000");
+
+            await unitOfWork.CommitTransactionAsync();
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Failed to persist paper trading reset: {ex.Message}", ex);
+        }
+
+        _log.Info("Paper trading reset: bankroll restored to $10,000");
     }
 
     // ──────────────────────────────────────────────────────────────

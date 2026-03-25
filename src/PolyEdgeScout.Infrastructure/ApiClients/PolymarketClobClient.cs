@@ -235,4 +235,85 @@ public sealed class PolymarketClobClient : IClobClient
             return null;
         }
     }
+
+    /// <inheritdoc />
+    public async Task<double?> GetMidpointPriceAsync(string tokenId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(tokenId))
+            return null;
+
+        try
+        {
+            string url = $"{_config.ClobBaseUrl}/book?token_id={tokenId}";
+            _log.Debug($"Fetching CLOB orderbook: {url}");
+
+            using HttpResponseMessage response = await _httpClient.GetAsync(url, ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _log.Debug($"CLOB orderbook request failed ({response.StatusCode}) for token {tokenId}");
+                return null;
+            }
+
+            string json = await response.Content.ReadAsStringAsync(ct);
+            using JsonDocument doc = JsonDocument.Parse(json);
+            JsonElement root = doc.RootElement;
+
+            double? bestBid = ExtractBestPrice(root, "bids");
+            double? bestAsk = ExtractBestPrice(root, "asks");
+
+            if (bestBid.HasValue && bestAsk.HasValue)
+            {
+                double midpoint = (bestBid.Value + bestAsk.Value) / 2.0;
+                _log.Debug($"CLOB midpoint for token {tokenId}: {midpoint:F4} (bid={bestBid.Value:F4}, ask={bestAsk.Value:F4})");
+                return midpoint;
+            }
+
+            // If only one side is available, use that
+            if (bestBid.HasValue)
+                return bestBid.Value;
+            if (bestAsk.HasValue)
+                return bestAsk.Value;
+
+            _log.Debug($"CLOB orderbook empty for token {tokenId}");
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // propagate cancellation
+        }
+        catch (Exception ex)
+        {
+            _log.Debug($"CLOB orderbook lookup failed for token {tokenId}: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Extracts the best price from a side of the orderbook (bids or asks).
+    /// The orderbook JSON structure is: { "bids": [{"price": "0.55", "size": "100"}], "asks": [...] }.
+    /// Returns null if the side is empty or missing.
+    /// </summary>
+    private static double? ExtractBestPrice(JsonElement root, string side)
+    {
+        if (!root.TryGetProperty(side, out JsonElement sideElement))
+            return null;
+
+        if (sideElement.ValueKind != JsonValueKind.Array || sideElement.GetArrayLength() == 0)
+            return null;
+
+        JsonElement bestLevel = sideElement[0];
+        if (bestLevel.TryGetProperty("price", out JsonElement priceElement))
+        {
+            string? priceStr = priceElement.GetString();
+            if (priceStr is not null
+                && double.TryParse(priceStr, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out double price))
+            {
+                return price;
+            }
+        }
+
+        return null;
+    }
 }

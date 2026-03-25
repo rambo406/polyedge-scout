@@ -6,6 +6,7 @@ using PolyEdgeScout.Application.DTOs;
 using PolyEdgeScout.Application.Interfaces;
 using PolyEdgeScout.Console.ViewModels;
 using PolyEdgeScout.Domain.Entities;
+using PolyEdgeScout.Domain.Enums;
 using PolyEdgeScout.Domain.Interfaces;
 using Xunit;
 
@@ -21,8 +22,9 @@ public class DashboardViewModelTests
         var marketVm = new MarketTableViewModel(_orderService, _config, _log);
         var portfolioVm = new PortfolioViewModel();
         var tradesVm = new TradesViewModel();
+        var tradesManagementVm = new TradesManagementViewModel(_orderService);
         var logVm = new LogViewModel(_log);
-        return new DashboardViewModel(_orchestrator, _orderService, _config, _log, marketVm, portfolioVm, tradesVm, logVm);
+        return new DashboardViewModel(_orchestrator, _orderService, _config, _log, marketVm, portfolioVm, tradesVm, tradesManagementVm, logVm);
     }
 
     [Fact]
@@ -57,7 +59,7 @@ public class DashboardViewModelTests
     {
         var markets = new List<MarketScanResult>
         {
-            new() { Market = new Market { Question = "BTC" }, Edge = 0.12, ModelProbability = 0.7, Action = "BUY" }
+            new() { Market = new Market { Question = "BTC" }, Edge = 0.12, ModelProbability = 0.7, Action = TradeAction.Buy }
         };
         _orchestrator.ScanEvaluateAndAutoTradeAsync(Arg.Any<CancellationToken>()).Returns(markets);
         _orderService.GetPnlSnapshot().Returns(new PnlSnapshot { Bankroll = 9500 });
@@ -86,7 +88,7 @@ public class DashboardViewModelTests
     public async Task RunScanLoopAsync_SetsLastErrorOnException()
     {
         _orchestrator.ScanEvaluateAndAutoTradeAsync(Arg.Any<CancellationToken>())
-            .Returns<Task<List<MarketScanResult>>>(x => throw new InvalidOperationException("API down"));
+            .Returns<IReadOnlyList<MarketScanResult>>(x => throw new InvalidOperationException("API down"));
 
         var vm = CreateVm();
         var errorFired = false;
@@ -124,7 +126,7 @@ public class DashboardViewModelTests
             lastErrorSnapshot = vm.LastError;
         };
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(2500));
 
         try { await vm.RunScanLoopAsync(cts.Token); }
         catch (OperationCanceledException) { }

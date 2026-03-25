@@ -1,6 +1,5 @@
 namespace PolyEdgeScout.Console.Views;
 
-using Terminal.Gui;
 using Terminal.Gui.App;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.ViewBase;
@@ -21,17 +20,17 @@ public sealed class ErrorIndicatorView : Label
         Visible = false;
         Height = 1;
         Width = Dim.Fill();
-        ColorScheme = new ColorScheme
+        SetScheme(new Scheme
         {
             Normal = new Attribute(Color.White, Color.Red)
-        };
+        });
 
         _vm.ErrorChanged += OnErrorChanged;
     }
 
     private void OnErrorChanged()
     {
-        Application.Invoke(() =>
+        App?.Invoke(() =>
         {
             if (_vm.LastError is not null)
             {

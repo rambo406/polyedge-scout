@@ -9,4 +9,9 @@ public interface ITradeRepository
     Task<List<Trade>> GetAllTradesAsync();
     Task AddAsync(Trade trade);
     Task UpdateAsync(Trade trade);
+
+    /// <summary>
+    /// Deletes all trades from the repository.
+    /// </summary>
+    Task DeleteAllAsync();
 }

@@ -43,14 +43,16 @@ public sealed class MarketTableViewModel
             return;
 
         var selected = _markets[SelectedIndex];
-        if (selected.Edge <= _config.MinEdge)
+        if (Math.Abs(selected.Edge) <= _config.MinEdge)
         {
             _log.Warn($"Insufficient edge for manual trade on: {selected.Market.Question}");
             TradeExecuted?.Invoke($"Insufficient edge on: {selected.Market.Question}");
             return;
         }
 
-        var trade = _orderService.EvaluateAndTrade(selected.Market, selected.ModelProbability, ct);
+        var trade = _orderService.EvaluateAndTrade(
+            selected.Market, selected.ModelProbability,
+            selected.TargetPrice, selected.CurrentAssetPrice, ct);
         if (trade is not null)
         {
             _log.Info($"Manual trade: {selected.Market.Question}");

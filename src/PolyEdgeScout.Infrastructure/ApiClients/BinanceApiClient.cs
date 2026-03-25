@@ -62,4 +62,57 @@ public sealed class BinanceApiClient : IBinanceApiClient
             return null;
         }
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<KlineData>?> FetchKlinesAsync(string symbol, string interval = "5m", int limit = 12, CancellationToken ct = default)
+    {
+        string url = $"{_config.BinanceApiBaseUrl}/api/v3/klines?symbol={symbol}USDT&interval={interval}&limit={limit}";
+
+        try
+        {
+            _log.Debug($"Fetching Binance klines: {url}");
+
+            using HttpResponseMessage response = await _httpClient.GetAsync(url, ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                string body = await response.Content.ReadAsStringAsync(ct);
+                _log.Warn($"Binance klines API returned {(int)response.StatusCode} for {symbol}USDT: {body}");
+                return null;
+            }
+
+            string json = await response.Content.ReadAsStringAsync(ct);
+            var rawKlines = JsonSerializer.Deserialize<JsonElement[]>(json);
+
+            if (rawKlines is null || rawKlines.Length == 0)
+                return [];
+
+            var klines = new List<KlineData>(rawKlines.Length);
+
+            foreach (JsonElement element in rawKlines)
+            {
+                klines.Add(new KlineData
+                {
+                    OpenTime = element[0].GetInt64(),
+                    Open = double.Parse(element[1].GetString()!),
+                    High = double.Parse(element[2].GetString()!),
+                    Low = double.Parse(element[3].GetString()!),
+                    Close = double.Parse(element[4].GetString()!),
+                    CloseTime = element[6].GetInt64(),
+                });
+            }
+
+            _log.Debug($"Binance klines for {symbol}USDT: {klines.Count} candles fetched");
+            return klines;
+        }
+        catch (OperationCanceledException)
+        {
+            throw; // propagate cancellation
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Binance klines API call failed for {symbol}USDT", ex);
+            return null;
+        }
+    }
 }

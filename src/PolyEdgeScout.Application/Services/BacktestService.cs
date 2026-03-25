@@ -5,6 +5,7 @@ using PolyEdgeScout.Application.DTOs;
 using PolyEdgeScout.Application.Interfaces;
 using PolyEdgeScout.Domain.Interfaces;
 using PolyEdgeScout.Domain.Services;
+using PolyEdgeScout.Domain.ValueObjects;
 
 /// <summary>
 /// Application-level backtesting service.
@@ -14,6 +15,8 @@ using PolyEdgeScout.Domain.Services;
 /// </summary>
 public sealed class BacktestService : IBacktestService
 {
+    private static readonly IEdgeFormula EdgeFormula = new DefaultScaledEdgeFormula();
+
     private readonly AppConfig _config;
     private readonly IGammaApiClient _gammaClient;
     private readonly IProbabilityModelService _probModel;
@@ -68,7 +71,10 @@ public sealed class BacktestService : IBacktestService
             }
 
             if (string.IsNullOrWhiteSpace(response.Question) ||
-                !MarketClassifier.IsCryptoMicro(response.Question))
+                !MarketClassifier.IsCryptoMicro(
+                    response.Question,
+                    _config.MarketFilter.IncludeKeywords,
+                    _config.MarketFilter.ExcludeKeywords))
             {
                 continue;
             }
@@ -96,25 +102,37 @@ public sealed class BacktestService : IBacktestService
 
             try
             {
-                double modelProb = await _probModel.CalculateProbabilityAsync(market, ct);
+                var modelProb = await _probModel.CalculateProbabilityAsync(market, ct);
+                if (modelProb is null)
+                {
+                    _log.Debug($"Backtest: skipping unparseable market — {Truncate(market.Question)}");
+                    continue;
+                }
+
+                var edgeCalc = EdgeCalculation.Create(
+                    EdgeFormula,
+                    modelProb.ModelProbability,
+                    market.YesPrice,
+                    modelProb.TargetPrice,
+                    modelProb.CurrentAssetPrice);
+
                 double actual = resolvedYes ? 1.0 : 0.0;
-                double edge = modelProb - market.YesPrice;
                 bool modelCorrect =
-                    (modelProb > 0.5 && actual == 1.0) ||
-                    (modelProb < 0.5 && actual == 0.0);
+                    (modelProb.ModelProbability > 0.5 && actual == 1.0) ||
+                    (modelProb.ModelProbability < 0.5 && actual == 0.0);
 
                 entries.Add(new BacktestEntry
                 {
                     MarketQuestion = market.Question,
-                    ModelProbability = modelProb,
+                    ModelProbability = modelProb.ModelProbability,
                     MarketYesPrice = market.YesPrice,
-                    Edge = edge,
+                    Edge = edgeCalc.Edge,
                     ActualOutcome = actual,
                     ModelCorrect = modelCorrect,
                 });
 
                 _log.Debug(
-                    $"BT: P={modelProb:F3} Actual={actual:F0} Mkt={market.YesPrice:F3} | " +
+                    $"BT: P={modelProb.ModelProbability:F3} Actual={actual:F0} Mkt={market.YesPrice:F3} | " +
                     $"{Truncate(market.Question)}");
             }
             catch (Exception ex)

@@ -31,4 +31,9 @@ public sealed class TradeRepository(TradingDbContext context) : ITradeRepository
         context.Trades.Update(trade);
         return Task.CompletedTask;
     }
+
+    public async Task DeleteAllAsync()
+    {
+        await context.Trades.ExecuteDeleteAsync();
+    }
 }
